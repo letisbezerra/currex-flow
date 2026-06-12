@@ -12,25 +12,35 @@ class PaymentRequest extends Model
 {
     protected $fillable = [
         'user_id',
-        'source_amount',
-        'source_currency',
-        'target_currency',
-        'exchange_rate',
-        'converted_amount',
+        'amount',
+        'currency_code',
+        'description',
         'status',
-        'processed_by',
-        'processed_at',
+        'exchange_rate',
+        'exchange_rate_source',
+        'exchange_rate_fetched_at',
+        'amount_in_eur',
+        'reviewed_by',
+        'reviewed_at',
+        'expires_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'source_amount' => 'decimal:2',
-            'exchange_rate' => 'decimal:8',
-            'converted_amount' => 'decimal:2',
-            'status' => PaymentStatus::class,
-            'processed_at' => 'datetime',
+            'amount'                    => 'decimal:2',
+            'exchange_rate'             => 'decimal:6',
+            'amount_in_eur'             => 'decimal:2',
+            'status'                    => PaymentStatus::class,
+            'exchange_rate_fetched_at'  => 'datetime',
+            'reviewed_at'               => 'datetime',
+            'expires_at'                => 'datetime',
         ];
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === PaymentStatus::Pending;
     }
 
     public function user(): BelongsTo
@@ -38,8 +48,8 @@ class PaymentRequest extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function processor(): BelongsTo
+    public function reviewer(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'processed_by');
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 }
