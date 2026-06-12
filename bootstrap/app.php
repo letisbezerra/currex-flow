@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,17 +21,20 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => null);
+        $middleware->api(prepend: [
+            \App\Http\Middleware\ForceJsonResponse::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (AuthenticationException $e) {
             return response()->json(['message' => 'Unauthenticated'], 401);
         });
 
-        $exceptions->render(function (AuthorizationException $e) {
+        $exceptions->render(function (AccessDeniedHttpException $e) {
             return response()->json(['message' => 'Forbidden'], 403);
         });
 
-        $exceptions->render(function (ModelNotFoundException $e) {
+        $exceptions->render(function (NotFoundHttpException $e) {
             return response()->json(['message' => 'Resource not found'], 404);
         });
 
