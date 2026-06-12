@@ -35,9 +35,13 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'role' => UserRole::class,
+            'role'              => UserRole::class,
         ];
+    }
+
+    public function isFinance(): bool
+    {
+        return $this->role === UserRole::Finance;
     }
 
     public function paymentRequests(): HasMany
@@ -45,8 +49,8 @@ class User extends Authenticatable
         return $this->hasMany(PaymentRequest::class);
     }
 
-    public function processedPayments(): HasMany
+    public function reviewedPayments(): HasMany
     {
-        return $this->hasMany(PaymentRequest::class, 'processed_by');
+        return $this->hasMany(PaymentRequest::class, 'reviewed_by');
     }
 }
