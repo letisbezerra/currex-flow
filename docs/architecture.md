@@ -1,83 +1,83 @@
 # Buzzvel — Multi-Currency Payment API
-## Documento de Arquitetura
+## Architecture Document
 
-> Teste técnico Buzzvel 2026 · Laravel 12 · PHP 8.2+ · Docker
+> Buzzvel 2026 Technical Test · Laravel 12 · PHP 8.2+ · Docker
 
 ---
 
-## Guias e Padrões Adotados
+## Guides and Standards
 
-### PHP-FIG — PSR Standards (o "guia oficial" do PHP)
+### PHP-FIG — PSR Standards
 
-| PSR | O que define | Ferramenta que automatiza |
-|-----|-------------|--------------------------|
-| PSR-1 | Classes em `PascalCase`, constantes em `UPPER_CASE`, métodos em `camelCase` | Laravel Pint |
-| PSR-4 | Autoloading por namespace (Composer resolve) | Composer |
-| PSR-12 | Estilo: 4 espaços, chaves, comprimento de linha ≤ 120 chars | Laravel Pint |
+| PSR | What it defines | Automated by |
+|-----|-----------------|--------------|
+| PSR-1 | `PascalCase` classes, `UPPER_CASE` constants, `camelCase` methods | Laravel Pint |
+| PSR-4 | Namespace-based autoloading (resolved by Composer) | Composer |
+| PSR-12 | Code style: 4 spaces, braces, max line length ≤ 120 chars | Laravel Pint |
 
 ### OWASP API Security Top 10
-Referência: [OWASP Laravel Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html)
+Reference: [OWASP Laravel Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html)
 
-Aplicado em cada camada do projeto (detalhes na seção Segurança).
+Applied at every layer of the project (details in the Security section).
 
 ---
 
-## Decisão de Arquitetura: Action Pattern
+## Architectural Decision: Action Pattern
 
-O **Service Pattern** clássico (`PaymentService` com 20 métodos) viola SRP e vira um "God Class". O mercado atual de Laravel usa **Action Classes**:
+The classic **Service Pattern** (`PaymentService` with 20 methods) violates SRP and becomes a "God Class". Modern Laravel development uses **Action Classes**:
 
-| ❌ Service Pattern (evitar) | ✅ Action Pattern (usar) |
-|-----------------------------|--------------------------|
+| ❌ Service Pattern (avoid) | ✅ Action Pattern (use) |
+|----------------------------|-------------------------|
 | `PaymentService::create()` | `CreatePaymentRequestAction` |
 | `PaymentService::approve()` | `ApprovePaymentRequestAction` |
 | `PaymentService::reject()` | `RejectPaymentRequestAction` |
 
-Cada Action faz **uma coisa só** — isso é SRP na prática.
+Each Action does **one thing only** — SRP in practice.
 
-> **Exceção**: `ExchangeRateApiService` mantém o nome "Service" porque é uma integração de infraestrutura, não uma operação de negócio.
-
----
-
-## SOLID — Como cada princípio aparece no projeto
-
-| Princípio | Onde aparece no código |
-|-----------|----------------------|
-| **S** — Single Responsibility | Cada Action class tem uma única responsabilidade |
-| **O** — Open/Closed | `ExchangeRateServiceInterface` — troca de provider sem modificar código existente |
-| **L** — Liskov Substitution | Qualquer implementação da interface substitui outra sem quebrar nada |
-| **I** — Interface Segregation | Interface pequena e focada: apenas `getRate()` |
-| **D** — Dependency Inversion | Controllers e Actions dependem da interface, não da implementação concreta |
+> **Exception**: `ExchangeRateApiService` keeps the "Service" naming because it is an infrastructure integration, not a business operation.
 
 ---
 
-## Stack Tecnológica
+## SOLID — How Each Principle Appears in the Project
 
-| Camada | Tecnologia |
-|--------|-----------|
+| Principle | Where it appears in the code |
+|-----------|------------------------------|
+| **S** — Single Responsibility | Each Action class has a single responsibility |
+| **O** — Open/Closed | `ExchangeRateServiceInterface` — swap provider without modifying existing code |
+| **L** — Liskov Substitution | Any interface implementation can replace another without breaking anything |
+| **I** — Interface Segregation | Small, focused interface: only `getRate()` |
+| **D** — Dependency Inversion | Controllers and Actions depend on the interface, not the concrete implementation |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
 | Framework | Laravel 12 |
-| Linguagem | PHP 8.2+ |
-| Banco de dados | MySQL 8.0 |
-| Cache / Rate Limit | Redis 7 |
+| Language | PHP 8.2+ |
+| Database | MySQL 8.0 |
+| Cache / Rate Limiting | Redis 7 |
 | Web server | Nginx (Alpine) |
-| Runtime PHP | PHP 8.2-FPM |
-| Autenticação | Laravel Sanctum |
-| Código estilo | Laravel Pint (PSR-12) |
-| Análise estática | Larastan (PHPStan para Laravel) |
-| Containerização | Docker + Docker Compose |
+| PHP runtime | PHP 8.2-FPM |
+| Authentication | Laravel Sanctum |
+| Code style | Laravel Pint (PSR-12) |
+| Static analysis | Larastan (PHPStan for Laravel) |
+| Containerisation | Docker + Docker Compose |
 
 ---
 
-## Estrutura de Pastas
+## Folder Structure
 
 ```
 payment-api/
 ├── app/
 │   │
-│   ├── Actions/                              # Lógica de negócio — uma classe, uma ação (SRP)
+│   ├── Actions/                              # Business logic — one class, one action (SRP)
 │   │   ├── Auth/
 │   │   │   └── LogoutAction.php
 │   │   └── Payment/
-│   │       ├── CreatePaymentRequestAction.php   # busca câmbio + persiste
+│   │       ├── CreatePaymentRequestAction.php   # fetches rate + persists
 │   │       ├── ApprovePaymentRequestAction.php
 │   │       └── RejectPaymentRequestAction.php
 │   │
@@ -87,7 +87,7 @@ payment-api/
 │   ├── DTOs/                                 # Data Transfer Objects — PHP 8.2 readonly classes
 │   │   └── ExchangeRateDTO.php
 │   │
-│   ├── Enums/                                # PHP 8.1+ enums nativos (type-safe)
+│   ├── Enums/                                # PHP 8.1+ native enums (type-safe)
 │   │   ├── PaymentStatus.php                 # pending | approved | rejected | expired
 │   │   └── UserRole.php                      # employee | finance
 │   │
@@ -95,11 +95,11 @@ payment-api/
 │   │   └── ExchangeRateException.php
 │   │
 │   ├── Http/
-│   │   ├── Controllers/Api/V1/               # Versionamento: /api/v1/
+│   │   ├── Controllers/Api/V1/               # Versioning: /api/v1/
 │   │   │   ├── AuthController.php
 │   │   │   └── PaymentRequestController.php
 │   │   │
-│   │   ├── Requests/                         # Validação separada do controller (SRP)
+│   │   ├── Requests/                         # Validation decoupled from controller (SRP)
 │   │   │   ├── Auth/
 │   │   │   │   ├── LoginRequest.php
 │   │   │   │   └── RegisterRequest.php
@@ -107,7 +107,7 @@ payment-api/
 │   │   │       ├── StorePaymentRequest.php
 │   │   │       └── UpdatePaymentStatusRequest.php
 │   │   │
-│   │   └── Resources/Api/V1/                 # Formata o JSON de saída (sem expor dados internos)
+│   │   └── Resources/Api/V1/                 # Formats JSON output (no internal fields exposed)
 │   │       ├── PaymentRequestResource.php
 │   │       └── UserResource.php
 │   │
@@ -116,16 +116,16 @@ payment-api/
 │   │   └── PaymentRequest.php
 │   │
 │   ├── Policies/
-│   │   └── PaymentRequestPolicy.php          # Autorização: quem pode fazer o quê
+│   │   └── PaymentRequestPolicy.php          # Authorization: who can do what
 │   │
 │   ├── Providers/
-│   │   └── AppServiceProvider.php            # Bind: Interface → Implementação concreta
+│   │   └── AppServiceProvider.php            # Binding: Interface → Concrete implementation
 │   │
 │   └── Services/ExchangeRate/
-│       └── ExchangeRateApiService.php        # Implementa ExchangeRateServiceInterface
+│       └── ExchangeRateApiService.php        # Implements ExchangeRateServiceInterface
 │
 ├── bootstrap/
-│   └── app.php                               # Handler global de exceções customizado
+│   └── app.php                               # Custom global exception handler
 │
 ├── database/
 │   ├── migrations/
@@ -133,10 +133,10 @@ payment-api/
 │   │   └── xxxx_create_payment_requests_table.php
 │   └── seeders/
 │       ├── DatabaseSeeder.php
-│       └── UserSeeder.php                    # 5+ employees + 1 finance
+│       └── UserSeeder.php                    # 5+ employees + 1 finance user
 │
 ├── routes/
-│   └── api.php                               # Todas as rotas com prefixo /v1
+│   └── api.php                               # All routes prefixed with /v1
 │
 ├── tests/
 │   ├── Feature/
@@ -147,139 +147,139 @@ payment-api/
 │   │       ├── ListPaymentRequestTest.php
 │   │       └── UpdatePaymentStatusTest.php
 │   └── Unit/
-│       └── ExchangeRateServiceTest.php       # Mock HTTP — sem chamar API real
+│       └── ExchangeRateServiceTest.php       # HTTP mock — no real API call
 │
 ├── docker/
 │   ├── nginx/default.conf
 │   └── php/Dockerfile
 │
 ├── docker-compose.yml
-├── .env.example                              # Sem secrets reais
+├── .env.example                              # No real secrets
 ├── phpstan.neon
-└── README.md                                 # OBRIGATÓRIO para submissão
+└── README.md                                 # Required for submission
 ```
 
 ---
 
-## Schema do Banco de Dados
+## Database Schema
 
-### Tabela `users` (campos adicionados à migration padrão)
+### `users` table (fields added to the default migration)
 
-| Campo | Tipo | Observação |
-|-------|------|-----------|
+| Column | Type | Notes |
+|--------|------|-------|
 | `role` | `enum('employee','finance')` | default: `employee` |
-| `country` | `string` | ex: Brazil, Japan |
-| `currency_code` | `string(3)` | ex: BRL, JPY, GBP |
+| `country` | `string` | e.g.: Brazil, Japan |
+| `currency_code` | `string(3)` | e.g.: BRL, JPY, GBP |
 
-### Tabela `payment_requests`
+### `payment_requests` table
 
-| Campo | Tipo | Observação |
-|-------|------|-----------|
+| Column | Type | Notes |
+|--------|------|-------|
 | `id` | `bigint unsigned` | PK |
-| `user_id` | `FK → users` | quem criou |
-| `amount` | `decimal(15,2)` | valor na moeda local |
-| `currency_code` | `string(3)` | ex: BRL |
-| `description` | `string(255)` | obrigatório |
+| `user_id` | `FK → users` | creator |
+| `amount` | `decimal(15,2)` | value in local currency |
+| `currency_code` | `string(3)` | e.g.: BRL |
+| `description` | `string(255)` | required |
 | `status` | `enum` | pending / approved / rejected / expired |
-| `exchange_rate` | `decimal(15,6)` | **imutável** após criação |
-| `exchange_rate_source` | `string` | ex: exchangerate-api.com |
-| `exchange_rate_fetched_at` | `timestamp` | quando foi buscada |
+| `exchange_rate` | `decimal(15,6)` | **immutable** after creation |
+| `exchange_rate_source` | `string` | e.g.: exchangerate-api.com |
+| `exchange_rate_fetched_at` | `timestamp` | when it was fetched |
 | `amount_in_eur` | `decimal(15,2)` | amount / exchange_rate |
-| `reviewed_by` | `FK nullable → users` | quem aprovou/rejeitou |
-| `reviewed_at` | `timestamp nullable` | quando |
+| `reviewed_by` | `FK nullable → users` | who approved/rejected |
+| `reviewed_at` | `timestamp nullable` | when |
 | `expires_at` | `timestamp` | created_at + 48h |
 | `timestamps` | | created_at, updated_at |
 
 ---
 
-## Endpoints da API
+## API Endpoints
 
 Base URL: `/api/v1`
 
-### Autenticação
+### Authentication
 
-| Método | Endpoint | Auth | Descrição |
-|--------|----------|------|-----------|
-| `POST` | `/auth/register` | — | Registra novo usuário |
-| `POST` | `/auth/login` | — | Login, retorna Bearer token |
-| `POST` | `/auth/logout` | ✓ | Revoga o token atual |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/auth/register` | — | Register new user |
+| `POST` | `/auth/login` | — | Login, returns Bearer token |
+| `POST` | `/auth/logout` | ✓ | Revoke current token |
 
 ### Payment Requests
 
-| Método | Endpoint | Auth | Role | Descrição |
-|--------|----------|------|------|-----------|
-| `GET` | `/payment-requests` | ✓ | any | Lista (employee vê os seus; finance vê todos). Filtro: `?status=pending` |
-| `POST` | `/payment-requests` | ✓ | any | Cria e busca câmbio automaticamente |
-| `GET` | `/payment-requests/{id}` | ✓ | any | Detalhe (com restrição de ownership) |
-| `PATCH` | `/payment-requests/{id}/status` | ✓ | finance | Aprova ou rejeita |
+| Method | Endpoint | Auth | Role | Description |
+|--------|----------|------|------|-------------|
+| `GET` | `/payment-requests` | ✓ | any | List (employee sees own; finance sees all). Filter: `?status=pending` |
+| `POST` | `/payment-requests` | ✓ | any | Create and fetch exchange rate automatically |
+| `GET` | `/payment-requests/{id}` | ✓ | any | Detail (with ownership restriction) |
+| `PATCH` | `/payment-requests/{id}/status` | ✓ | finance | Approve or reject |
 
 ---
 
-## Fluxo de Criação de Payment Request
+## Payment Request Creation Flow
 
 ```
 POST /api/v1/payment-requests
   │
-  ├── Middleware: Sanctum verifica token
-  ├── StorePaymentRequest: valida campos (amount, currency_code, description)
+  ├── Middleware: Sanctum validates token
+  ├── StorePaymentRequest: validates fields (amount, description)
   ├── PaymentRequestController::store()
   │     └── CreatePaymentRequestAction::__invoke()
   │           ├── ExchangeRateServiceInterface::getRate(currency_code)
   │           │     └── GET https://api.exchangerate-api.com/v4/latest/EUR
-  │           │           └── retorna ExchangeRateDTO { rate, source, fetchedAt }
-  │           ├── calcula amount_in_eur = amount / rate
-  │           ├── define expires_at = now() + 48h
-  │           └── PaymentRequest::create([...])  ← taxa salva, imutável
-  └── PaymentRequestResource → resposta JSON 201
+  │           │           └── returns ExchangeRateDTO { rate, source, fetchedAt }
+  │           ├── calculates amount_in_eur = amount / rate
+  │           ├── sets expires_at = now() + 48h
+  │           └── PaymentRequest::create([...])  ← rate stored, immutable
+  └── PaymentRequestResource → JSON 201 response
 ```
 
 ---
 
-## Fluxo de Aprovação/Rejeição
+## Approval/Rejection Flow
 
 ```
 PATCH /api/v1/payment-requests/{id}/status
   │
-  ├── Middleware: Sanctum verifica token
-  ├── UpdatePaymentStatusRequest: valida { status: approved|rejected }
+  ├── Middleware: Sanctum validates token
+  ├── UpdatePaymentStatusRequest: validates { status: approved|rejected }
   ├── PaymentRequestController::updateStatus()
-  │     ├── Policy::updateStatus() → verifica se user tem role finance
-  │     ├── Verifica se status atual é 'pending' (não pode reprocessar)
-  │     └── ApprovePaymentRequestAction ou RejectPaymentRequestAction
-  │           ├── atualiza status
-  │           ├── salva reviewed_by e reviewed_at
-  │           └── retorna PaymentRequest atualizado
-  └── PaymentRequestResource → resposta JSON 200
+  │     ├── Policy::updateStatus() → checks user has finance role
+  │     ├── Checks current status is 'pending' (cannot reprocess)
+  │     └── ApprovePaymentRequestAction or RejectPaymentRequestAction
+  │           ├── updates status
+  │           ├── saves reviewed_by and reviewed_at
+  │           └── returns updated PaymentRequest
+  └── PaymentRequestResource → JSON 200 response
 ```
 
 ---
 
-## Tarefa Agendada — Expiração Automática
+## Scheduled Task — Automatic Expiration
 
 ```php
 // routes/console.php
 Schedule::command('payments:expire-pending')->hourly();
 
 // app/Console/Commands/ExpirePaymentRequestsCommand.php
-// Busca todos os pending com expires_at < now() e muda para expired
+// Finds all pending requests with expires_at < now() and sets status to expired
 ```
 
-No Docker, um container `scheduler` roda `php artisan schedule:work` continuamente — sem precisar de cron no host.
+In Docker, a dedicated `scheduler` container runs `php artisan schedule:work` continuously — no host-level cron required.
 
 ---
 
-## Segurança — OWASP API Security Top 10
+## Security — OWASP API Security Top 10
 
-| # | Risco | Mitigação no projeto |
-|---|-------|---------------------|
-| 1 | Broken Object Level Authorization | Policy verifica `user_id` antes de qualquer leitura/escrita |
-| 2 | Broken Authentication | Sanctum + rate limit `6 req/min` no login |
-| 3 | Broken Object Property Authorization | API Resources — nunca retorna Model direto (sem `password`, etc.) |
-| 4 | Unrestricted Resource Consumption | Rate limit `60 req/min` geral + paginação no index |
-| 5 | Broken Function Level Authorization | Role `finance` verificado via Policy no approve/reject |
-| 7 | SSRF | `Http::timeout(10)` + URL hardcoded, nunca aceita URL do usuário |
-| 8 | Security Misconfiguration | `.env.example` sem secrets, `APP_DEBUG=false` em produção |
-| 10 | Unsafe Consumption of APIs | Try/catch no ExchangeRateService com exception tipada |
+| # | Risk | Mitigation in this project |
+|---|------|---------------------------|
+| 1 | Broken Object Level Authorization | Policy checks `user_id` before any read/write |
+| 2 | Broken Authentication | Sanctum + rate limit `6 req/min` on login |
+| 3 | Broken Object Property Authorization | API Resources — never returns Model directly (no `password`, etc.) |
+| 4 | Unrestricted Resource Consumption | Rate limit `60 req/min` general + pagination on index |
+| 5 | Broken Function Level Authorization | `finance` role verified via Policy on approve/reject |
+| 7 | SSRF | `Http::timeout(10)` + hardcoded URL, never accepts user-supplied URL |
+| 8 | Security Misconfiguration | `.env.example` with no secrets, `APP_DEBUG=false` in production |
+| 10 | Unsafe Consumption of APIs | Try/catch in ExchangeRateService with typed exception |
 
 ---
 
@@ -295,92 +295,73 @@ No Docker, um container `scheduler` roda `php artisan schedule:work` continuamen
               ▼           ▼           ▼
          ┌────────┐  ┌────────┐  ┌───────────┐
          │ mysql  │  │ redis  │  │ scheduler │
-         │  8.0   │  │   7   │  │ schedule: │
+         │  8.0   │  │   7    │  │ schedule: │
          └────────┘  └────────┘  │   :work   │
                                   └───────────┘
 ```
 
-| Container | Imagem | Porta | Função |
-|-----------|--------|-------|--------|
-| `app` | PHP 8.2-FPM (custom Dockerfile) | — | Executa o Laravel |
+| Container | Image | Port | Role |
+|-----------|-------|------|------|
+| `app` | PHP 8.2-FPM (custom Dockerfile) | — | Runs Laravel |
 | `nginx` | nginx:alpine | 8000:80 | Web server |
-| `db` | mysql:8.0 | — | Banco de dados (volume persistente) |
+| `db` | mysql:8.0 | — | Database (persistent volume) |
 | `redis` | redis:7-alpine | — | Rate limiting + cache |
-| `scheduler` | Mesmo do `app` | — | `php artisan schedule:work` |
+| `scheduler` | Same as `app` | — | `php artisan schedule:work` |
 
 ---
 
-## Seeders — 5 Funcionários
+## Seeders — 5 Employees
 
-| Nome | País | Moeda | Role |
-|------|------|-------|------|
-| Ana Lima | Brasil | BRL | employee |
-| James Smith | Reino Unido | GBP | employee |
-| Yuki Tanaka | Japão | JPY | employee |
-| Priya Patel | Índia | INR | employee |
-| Lucas Dupont | Canadá | CAD | employee |
+| Name | Country | Currency | Role |
+|------|---------|----------|------|
+| Ana Lima | Brazil | BRL | employee |
+| James Smith | United Kingdom | GBP | employee |
+| Yuki Tanaka | Japan | JPY | employee |
+| Priya Patel | India | INR | employee |
+| Lucas Dupont | Canada | CAD | employee |
 | Maria Santos | Portugal | EUR | **finance** |
 
 ---
 
-## Testes
+## Tests
 
-| Arquivo | O que testa |
-|---------|------------|
-| `Unit/ExchangeRateServiceTest` | Mock do Http facade — sem chamada real à API |
-| `Feature/Auth/AuthTest` | Register, login, logout, token inválido |
-| `Feature/Payment/CreatePaymentRequestTest` | Criação com câmbio mockado, validações |
-| `Feature/Payment/ListPaymentRequestTest` | Filtro por status, isolamento por role |
-| `Feature/Payment/UpdatePaymentStatusTest` | Aprovação (finance), rejeição, acesso negado (employee), pedido já processado |
+| File | What it tests |
+|------|---------------|
+| `Unit/ExchangeRateServiceTest` | Http facade mock — no real API call |
+| `Feature/Auth/AuthTest` | Register, login, logout, invalid token |
+| `Feature/Payment/CreatePaymentRequestTest` | Creation with mocked exchange rate, validations |
+| `Feature/Payment/ListPaymentRequestTest` | Status filter, role-based isolation |
+| `Feature/Payment/UpdatePaymentStatusTest` | Approval (finance), rejection, access denied (employee), already-processed request |
 
 ---
 
-## Ferramentas de Qualidade de Código
+## Code Quality Tools
 
 ```bash
-# Formatar código automaticamente (PSR-12)
-./vendor/bin/pint
+# Auto-format code (PSR-12)
+composer format
 
-# Análise estática — encontra erros sem rodar o código
-./vendor/bin/phpstan analyse --level=8
+# Static analysis — finds errors without running code
+composer analyse
 
-# Rodar testes
-php artisan test
+# Run tests
+composer test
 ```
 
 ---
 
-## Ordem de Implementação
+## What Differentiates This Architecture
 
-1. `laravel new payment-api` + instalar Sanctum
-2. Migrations (users + payment_requests)
-3. Models com cast de Enum e relacionamentos
-4. Auth (register / login / logout)
-5. `ExchangeRateServiceInterface` + `ExchangeRateApiService`
-6. Bind da interface no `AppServiceProvider`
-7. Actions: Create, Approve, Reject
-8. Controller + Routes + Resources
-9. Policy de autorização
-10. Command de expiração + schedule
-11. Seeders
-12. Testes
-13. Docker completo
-14. README
+| Differentiator | Why it matters |
+|----------------|----------------|
+| Action Pattern | Real SRP — each operation is a testable, isolated class |
+| Interface for ExchangeRate | DIP — swap provider without touching Actions |
+| `readonly` DTO (PHP 8.2) | Immutable, type-safe data, no side effects |
+| Versioned API `/v1/` | Allows evolution without breaking changes |
+| Docker with scheduler container | Decision factor for the Buzzvel role |
+| PHPStan level 6 + Pint | Professional team standard |
+| OWASP applied | Real security at every layer |
 
 ---
 
-## O que diferencia essa arquitetura
-
-| Diferencial | Por quê importa |
-|------------|----------------|
-| Action Pattern | SRP real — cada operação é uma classe testável e isolada |
-| Interface para ExchangeRate | DIP — troca de provider sem tocar nas Actions |
-| DTO `readonly` (PHP 8.2) | Dados imutáveis, type-safe, sem efeitos colaterais |
-| API versionada `/v1/` | Permite evolução sem breaking change |
-| Docker com scheduler | Fator decisivo na vaga Buzzvel |
-| PHPStan nível 8 + Pint | Padrão de times profissionais |
-| OWASP aplicado | Segurança real em cada camada |
-
----
-
-*Referências: [PHP-FIG PSR](https://www.php-fig.org/psr/) · [OWASP Laravel Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html) · [Action Pattern](https://nabilhassen.com/action-pattern-in-laravel-concept-benefits-best-practices) · [Laravel Best Practices](https://medium.com/@paulofelipemartins/laravel-best-practices-solid-clean-architecture-design-patterns-c0fab56fe40c)*
+*References: [PHP-FIG PSR](https://www.php-fig.org/psr/) · [OWASP Laravel Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Laravel_Cheat_Sheet.html) · [Action Pattern](https://nabilhassen.com/action-pattern-in-laravel-concept-benefits-best-practices) · [Laravel Best Practices](https://medium.com/@paulofelipemartins/laravel-best-practices-solid-clean-architecture-design-patterns-c0fab56fe40c)*
