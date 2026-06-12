@@ -20,7 +20,7 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::create([
-            ...$request->safe()->except('password_confirmation'),
+            ...$request->safe()->except(['password', 'password_confirmation']),
             'password' => Hash::make($request->password),
             'role'     => UserRole::Employee,
         ]);
