@@ -1,59 +1,213 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Currex Flow
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Multi-currency payment request service built with Laravel 12. Employees across different countries can submit payment requests in their local currency, with real-time EUR exchange rate conversion and finance team approval workflow.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Tech Stack
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **PHP** 8.2+
+- **Laravel** 12
+- **MySQL** 8.0
+- **Redis** 7 (rate limiting)
+- **Docker** + Docker Compose
+- **Laravel Sanctum** (authentication)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## Requirements
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- Docker
+- Docker Compose
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+> No local PHP or Composer installation required.
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## Local Setup
 
-### Premium Partners
+### 1. Clone the repository
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+git clone https://github.com/letisbezerra/currex-flow.git
+cd currex-flow
+```
 
-## Contributing
+### 2. Configure environment
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+cp .env.example .env
+```
 
-## Code of Conduct
+Edit `.env` and set your exchange rate API key:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```env
+EXCHANGE_RATE_API_KEY=your_key_here
+```
 
-## Security Vulnerabilities
+> Free API key available at [exchangerate-api.com](https://www.exchangerate-api.com)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 3. Start the containers
+
+```bash
+docker compose up -d
+```
+
+### 4. Install dependencies
+
+```bash
+docker compose exec app composer install
+```
+
+### 5. Generate application key
+
+```bash
+docker compose exec app php artisan key:generate
+```
+
+### 6. Run migrations and seeders
+
+```bash
+docker compose exec app php artisan migrate --seed
+```
+
+The application will be available at **http://localhost:8000**
+
+---
+
+## Seed Users
+
+The database is seeded with the following users for testing:
+
+| Name | Email | Password | Currency | Role |
+|------|-------|----------|----------|------|
+| Ana Lima | ana@currex.dev | password | BRL | employee |
+| James Smith | james@currex.dev | password | GBP | employee |
+| Yuki Tanaka | yuki@currex.dev | password | JPY | employee |
+| Priya Patel | priya@currex.dev | password | INR | employee |
+| Lucas Dupont | lucas@currex.dev | password | CAD | employee |
+| Maria Santos | maria@currex.dev | password | EUR | finance |
+
+> `maria@currex.dev` has the **finance** role and can approve or reject payment requests.
+
+---
+
+## API Endpoints
+
+Base URL: `http://localhost:8000/api/v1`
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/auth/register` | — | Register a new user |
+| `POST` | `/auth/login` | — | Login and receive Bearer token |
+| `POST` | `/auth/logout` | ✓ | Revoke current token |
+
+### Payment Requests
+
+| Method | Endpoint | Auth | Role | Description |
+|--------|----------|------|------|-------------|
+| `GET` | `/payment-requests` | ✓ | any | List requests. Filter: `?status=pending` |
+| `POST` | `/payment-requests` | ✓ | any | Create request (exchange rate fetched automatically) |
+| `GET` | `/payment-requests/{id}` | ✓ | any | Get request details |
+| `PATCH` | `/payment-requests/{id}/status` | ✓ | finance | Approve or reject a pending request |
+
+### Example: Create a payment request
+
+**Request**
+```http
+POST /api/v1/payment-requests
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 1500.00,
+  "currency_code": "BRL",
+  "description": "Office supplies reimbursement"
+}
+```
+
+**Response** `201 Created`
+```json
+{
+  "data": {
+    "id": 1,
+    "amount": "1500.00",
+    "currency_code": "BRL",
+    "description": "Office supplies reimbursement",
+    "status": "pending",
+    "exchange_rate": "5.423100",
+    "exchange_rate_source": "exchangerate-api.com",
+    "exchange_rate_fetched_at": "2026-06-11T22:00:00Z",
+    "amount_in_eur": "276.61",
+    "expires_at": "2026-06-13T22:00:00Z",
+    "created_at": "2026-06-11T22:00:00Z"
+  }
+}
+```
+
+### Example: Approve a payment request
+
+**Request**
+```http
+PATCH /api/v1/payment-requests/1/status
+Authorization: Bearer {finance_token}
+Content-Type: application/json
+
+{
+  "status": "approved"
+}
+```
+
+**Response** `200 OK`
+```json
+{
+  "data": {
+    "id": 1,
+    "status": "approved",
+    "reviewed_by": "Maria Santos",
+    "reviewed_at": "2026-06-11T23:00:00Z"
+  }
+}
+```
+
+---
+
+## Running Tests
+
+```bash
+docker compose exec app php artisan test
+```
+
+---
+
+## Scheduled Tasks
+
+Payment requests that remain `pending` for more than 48 hours are automatically set to `expired`. The scheduler runs inside a dedicated Docker container and requires no external cron configuration.
+
+---
+
+## Project Structure
+
+```
+app/
+├── Actions/          # Single-responsibility business operations (SRP)
+├── Contracts/        # Interfaces for dependency inversion (DIP)
+├── DTOs/             # Typed data transfer objects (PHP 8.2 readonly)
+├── Enums/            # PaymentStatus, UserRole
+├── Exceptions/       # Domain-specific exceptions
+├── Http/
+│   ├── Controllers/Api/V1/
+│   ├── Requests/     # Input validation
+│   └── Resources/    # JSON response formatting
+├── Models/
+├── Policies/         # Authorization rules
+└── Services/         # Infrastructure integrations (exchange rate API)
+```
+
+---
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT
