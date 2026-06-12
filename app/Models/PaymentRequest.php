@@ -8,6 +8,9 @@ use App\Enums\PaymentStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property PaymentStatus $status
+ */
 class PaymentRequest extends Model
 {
     protected $fillable = [
@@ -28,13 +31,13 @@ class PaymentRequest extends Model
     protected function casts(): array
     {
         return [
-            'amount'                    => 'decimal:2',
-            'exchange_rate'             => 'decimal:6',
-            'amount_in_eur'             => 'decimal:2',
-            'status'                    => PaymentStatus::class,
-            'exchange_rate_fetched_at'  => 'datetime',
-            'reviewed_at'               => 'datetime',
-            'expires_at'                => 'datetime',
+            'amount' => 'decimal:2',
+            'exchange_rate' => 'decimal:6',
+            'amount_in_eur' => 'decimal:2',
+            'status' => PaymentStatus::class,
+            'exchange_rate_fetched_at' => 'datetime',
+            'reviewed_at' => 'datetime',
+            'expires_at' => 'datetime',
         ];
     }
 
@@ -43,11 +46,13 @@ class PaymentRequest extends Model
         return $this->status === PaymentStatus::Pending;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');

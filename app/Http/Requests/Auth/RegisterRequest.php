@@ -14,13 +14,14 @@ class RegisterRequest extends ApiFormRequest
         return true;
     }
 
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'name'          => 'required|string|max:255',
-            'email'         => 'required|email|unique:users,email',
-            'password'      => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
-            'country'       => 'required|string|max:100',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+            'country' => 'required|string|max:100',
             'currency_code' => 'required|string|size:3',
         ];
     }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\ExchangeRateServiceInterface;
+use App\Services\ExchangeRate\ExchangeRateApiService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,7 +15,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        $this->app->bind(
+            ExchangeRateServiceInterface::class,
+            ExchangeRateApiService::class
+        );
     }
 
     public function boot(): void

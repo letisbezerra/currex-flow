@@ -1,18 +1,8 @@
 <?php
 
-return [
+declare(strict_types=1);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Third Party Services
-    |--------------------------------------------------------------------------
-    |
-    | This file is for storing the credentials for third party services such
-    | as Mailgun, Postmark, AWS and more. This file provides the de facto
-    | location for this type of information, allowing packages to have
-    | a conventional file to locate the various service credentials.
-    |
-    */
+return [
 
     'postmark' => [
         'key' => env('POSTMARK_API_KEY'),
@@ -33,6 +23,11 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    'exchange_rate' => [
+        'base_url' => env('EXCHANGE_RATE_BASE_URL', 'https://api.exchangerate-api.com/v4/latest'),
+        'source' => 'exchangerate-api.com',
     ],
 
 ];
