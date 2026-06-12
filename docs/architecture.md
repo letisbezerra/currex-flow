@@ -63,6 +63,7 @@ Each Action does **one thing only** — SRP in practice.
 | Authentication | Laravel Sanctum |
 | Code style | Laravel Pint (PSR-12) |
 | Static analysis | Larastan (PHPStan for Laravel) |
+| API documentation | Scramble (OpenAPI 3.1 — auto-generated, zero annotations) |
 | Containerisation | Docker + Docker Compose |
 
 ---
@@ -74,8 +75,6 @@ payment-api/
 ├── app/
 │   │
 │   ├── Actions/                              # Business logic — one class, one action (SRP)
-│   │   ├── Auth/
-│   │   │   └── LogoutAction.php
 │   │   └── Payment/
 │   │       ├── CreatePaymentRequestAction.php   # fetches rate + persists
 │   │       ├── ApprovePaymentRequestAction.php
@@ -122,7 +121,7 @@ payment-api/
 │   │   └── AppServiceProvider.php            # Binding: Interface → Concrete implementation
 │   │
 │   └── Services/ExchangeRate/
-│       └── ExchangeRateApiService.php        # Implements ExchangeRateServiceInterface
+│       └── ExchangeRateApiService.php        # Implements ExchangeRateServiceInterface (Service + HTTP client merged — YAGNI: single endpoint, Http::fake() covers test isolation)
 │
 ├── bootstrap/
 │   └── app.php                               # Custom global exception handler
@@ -190,11 +189,20 @@ payment-api/
 | `expires_at` | `timestamp` | created_at + 48h |
 | `timestamps` | | created_at, updated_at |
 
+**Indexes:** `status` (filtered on every list query), `user_id` (implicit via FK constraint).
+
 ---
 
 ## API Endpoints
 
 Base URL: `/api/v1`
+
+### Documentation
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/docs/api` | — | Interactive OpenAPI UI (Scramble) |
+| `GET` | `/docs/api.json` | — | Raw OpenAPI 3.1 spec |
 
 ### Authentication
 
@@ -279,7 +287,7 @@ In Docker, a dedicated `scheduler` container runs `php artisan schedule:work` co
 | 5 | Broken Function Level Authorization | `finance` role verified via Policy on approve/reject |
 | 7 | SSRF | `Http::timeout(10)` + hardcoded URL, never accepts user-supplied URL |
 | 8 | Security Misconfiguration | `.env.example` with no secrets, `APP_DEBUG=false` in production |
-| 10 | Unsafe Consumption of APIs | Try/catch in ExchangeRateService with typed exception |
+| 10 | Unsafe Consumption of APIs | Try/catch in ExchangeRateService with typed exception; `DomainException` handler returns 409 for already-processed requests |
 
 ---
 
@@ -361,6 +369,7 @@ composer test
 | Docker with scheduler container | Decision factor for the Buzzvel role |
 | PHPStan level 6 + Pint | Professional team standard |
 | OWASP applied | Real security at every layer |
+| Scramble (OpenAPI 3.1) | Interactive API docs auto-generated from code — evaluator can test endpoints directly in the browser |
 
 ---
 
