@@ -1,6 +1,6 @@
 # CurrEx Flow
 
-Multi-currency payment request service built with Laravel 12. Employees across different countries submit payment requests in their local currency; the API fetches the live EUR exchange rate at submission time and stores it with the request. Finance team members can then approve or reject pending requests.
+Multi-currency payment request service built with Laravel 12. Employees across different countries submit payment requests in their local currency; the API fetches the live EUR exchange rate at submission time and stores it immutably with the request. Finance team members can then approve or reject pending requests.
 
 ---
 
@@ -23,7 +23,7 @@ Multi-currency payment request service built with Laravel 12. Employees across d
 - Docker
 - Docker Compose
 
-> No local PHP or Composer installation required.
+> No local PHP or Composer installation required. Tests also run inside Docker.
 
 ---
 
@@ -41,7 +41,7 @@ cp .env.example .env
 Edit `.env` and fill in the required values:
 
 ```env
-APP_KEY=                        # generated in step 4
+APP_KEY=                        # generated in step 5
 DB_PASSWORD=secret              # any local password
 DB_ROOT_PASSWORD=secret
 EXCHANGE_RATE_API_KEY=          # free key at exchangerate-api.com
@@ -104,7 +104,7 @@ Base URL: `http://localhost:8000/api/v1`
 | `GET` | `/payment-requests/{id}` | ✓ | any | Get request details (employees can only view their own) |
 | `PATCH` | `/payment-requests/{id}/status` | ✓ | finance | Approve or reject a pending request |
 
-### Error responses
+### Error Responses
 
 | Code | Meaning |
 |------|---------|
@@ -162,6 +162,8 @@ curl -s -X POST http://localhost:8000/api/v1/payment-requests \
 }
 ```
 
+> The exchange rate is fetched once at creation and stored permanently. Subsequent reads always return the rate as it was at submission time — the EUR equivalent never drifts.
+
 ### Approve a payment request (finance only)
 
 ```bash
@@ -170,33 +172,6 @@ curl -s -X PATCH http://localhost:8000/api/v1/payment-requests/1/status \
   -H "Content-Type: application/json" \
   -d '{"status": "approved"}'
 ```
-
----
-
-## Useful Commands
-
-```bash
-# Run all tests
-docker compose exec app php artisan test
-
-# Static analysis (PHPStan level 6)
-docker compose exec app ./vendor/bin/phpstan analyse
-
-# Code style (Laravel Pint / PSR-12)
-docker compose exec app ./vendor/bin/pint
-
-# Manually expire overdue payment requests
-docker compose exec app php artisan payments:expire-pending
-
-# View scheduled tasks
-docker compose exec app php artisan schedule:list
-```
-
----
-
-## Scheduled Tasks
-
-Payment requests that remain `pending` for more than 48 hours are automatically set to `expired`. The scheduler runs inside a dedicated `scheduler` Docker container — no external cron configuration required.
 
 ---
 
@@ -220,15 +195,77 @@ app/
 └── Services/         # External integrations (ExchangeRateApiService)
 ```
 
-### Architecture Decision Records
+### Design Decisions
 
-| ADR | Decision |
-|-----|---------|
-| [ADR-001](docs/adr/001-sanctum-over-passport.md) | Sanctum over Passport for token auth |
-| [ADR-002](docs/adr/002-action-pattern-over-service-pattern.md) | Action pattern over God Service class |
-| [ADR-003](docs/adr/003-interface-for-exchange-rate-service.md) | Interface for exchange rate provider |
-| [ADR-004](docs/adr/004-decimal-over-float-for-monetary-values.md) | `DECIMAL` over `float` for monetary values |
-| [ADR-005](docs/adr/005-api-versioning-v1.md) | URL-based versioning under `/api/v1` |
+Key architectural choices are documented as Architecture Decision Records (ADRs) in [`docs/adr/`](docs/adr/). Each decision is recorded with full context and trade-offs; the rationale is summarized below.
+
+| ADR | Decision | Why |
+|-----|----------|-----|
+| [ADR-001](docs/adr/001-sanctum-over-passport.md) | Sanctum over Passport | Passport is OAuth2 server infrastructure — overkill for a first-party API. Sanctum provides the same token-based auth for SPA and mobile clients with no added complexity. |
+| [ADR-002](docs/adr/002-action-pattern-over-service-pattern.md) | Action pattern over God Service | A single `PaymentService` grows unbounded and violates SRP. One class per operation (`CreatePaymentRequestAction`, `ApprovePaymentRequestAction`, `RejectPaymentRequestAction`) keeps each path independently readable, testable, and changeable. |
+| [ADR-003](docs/adr/003-interface-for-exchange-rate-service.md) | Interface for exchange rate provider | `ExchangeRateServiceInterface` decouples the domain from any specific third-party API. Tests inject a mock that satisfies the contract; the live provider can be swapped without touching business logic. |
+| [ADR-004](docs/adr/004-decimal-over-float-for-monetary-values.md) | `DECIMAL` over `float` for monetary values | IEEE 754 cannot represent most decimal fractions exactly — `0.1 + 0.2` yields `0.30000000000000004` in PHP. Financial values stored as `DECIMAL(15,2)` and cast as PHP strings eliminate rounding errors across the full request/response cycle. |
+| [ADR-005](docs/adr/005-api-versioning-v1.md) | URL versioning under `/api/v1` | URL versioning is explicit, cache-friendly, and works in every HTTP client without custom headers. Header-based versioning (`Accept: application/vnd.api+json; version=1`) is harder to test in browsers and standard API clients. |
+
+---
+
+## Security
+
+This is a payment API — security was treated as a first-class concern throughout, following the [OWASP API Security Top 10](https://owasp.org/API-Security/).
+
+| Layer | Measure |
+|-------|---------|
+| **Headers** | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Content-Security-Policy: default-src 'none'` on every response |
+| **Rate limiting** | 60 req/min API-wide; 6 req/min on auth endpoints (anti-brute-force) |
+| **CORS** | Wildcard in development; restricted to `CORS_ALLOWED_ORIGINS` env variable in production |
+| **Debug mode** | `APP_DEBUG=false` in `.env.example` — no stack traces leak in production |
+| **Token revocation** | `POST /auth/logout` deletes the current token server-side; abandoned tokens cannot be reused |
+| **Authorization** | `PaymentRequestPolicy` enforces ownership — employees can only read their own requests; only `finance` role can approve/reject |
+| **Consistent JSON** | `ForceJsonResponse` middleware ensures the API never returns an HTML error page regardless of the `Accept` header |
+
+---
+
+## Tests
+
+**43 tests — 106 assertions.** All tests run inside Docker against an in-memory SQLite database.
+
+```bash
+docker compose exec app php artisan test
+```
+
+Coverage includes: authentication flows, payment request lifecycle (create → approve/reject), authorization boundaries (employee vs. finance), validation errors, 48h expiry command, exchange rate failure handling, and pagination.
+
+---
+
+## Scheduled Tasks
+
+Payment requests that remain `pending` for more than 48 hours are automatically set to `expired`. The scheduler runs inside a dedicated `scheduler` Docker container — no external cron configuration required.
+
+```bash
+# View scheduled tasks
+docker compose exec app php artisan schedule:list
+
+# Run manually
+docker compose exec app php artisan payments:expire-pending
+```
+
+---
+
+## Useful Commands
+
+```bash
+# Run all tests
+docker compose exec app php artisan test
+
+# Static analysis (PHPStan level 6)
+docker compose exec app ./vendor/bin/phpstan analyse
+
+# Code style check/fix (Laravel Pint / PSR-12)
+docker compose exec app ./vendor/bin/pint
+
+# Open API documentation
+open http://localhost:8000/docs/api
+```
 
 ---
 
