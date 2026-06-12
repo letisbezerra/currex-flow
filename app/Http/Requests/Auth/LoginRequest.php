@@ -13,10 +13,11 @@ class LoginRequest extends ApiFormRequest
         return true;
     }
 
+    /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required|string',
         ];
     }

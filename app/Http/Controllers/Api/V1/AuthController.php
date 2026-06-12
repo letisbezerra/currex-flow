@@ -22,12 +22,12 @@ class AuthController extends Controller
         $user = User::create([
             ...$request->safe()->except(['password', 'password_confirmation']),
             'password' => Hash::make($request->password),
-            'role'     => UserRole::Employee,
+            'role' => UserRole::Employee,
         ]);
 
         return response()->json([
             'token' => $user->createToken('api-token')->plainTextToken,
-            'user'  => new UserResource($user),
+            'user' => new UserResource($user),
         ], 201);
     }
 
@@ -43,7 +43,7 @@ class AuthController extends Controller
 
         return response()->json([
             'token' => $user->createToken('api-token')->plainTextToken,
-            'user'  => new UserResource($user),
+            'user' => new UserResource($user),
         ]);
     }
 

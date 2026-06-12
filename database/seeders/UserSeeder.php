@@ -25,16 +25,16 @@ class UserSeeder extends Seeder
             User::create([
                 ...$data,
                 'password' => Hash::make('password'),
-                'role'     => UserRole::Employee,
+                'role' => UserRole::Employee,
             ]);
         }
 
         User::create([
-            'name'          => 'Finance Manager',
-            'email'         => 'finance@buzzvel.com',
-            'password'      => Hash::make('password'),
-            'role'          => UserRole::Finance,
-            'country'       => 'Portugal',
+            'name' => 'Finance Manager',
+            'email' => 'finance@buzzvel.com',
+            'password' => Hash::make('password'),
+            'role' => UserRole::Finance,
+            'country' => 'Portugal',
             'currency_code' => 'EUR',
         ]);
     }

@@ -12,6 +12,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property UserRole $role
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -35,7 +38,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
-            'role'              => UserRole::class,
+            'role' => UserRole::class,
         ];
     }
 
@@ -44,11 +47,13 @@ class User extends Authenticatable
         return $this->role === UserRole::Finance;
     }
 
+    /** @return HasMany<PaymentRequest, $this> */
     public function paymentRequests(): HasMany
     {
         return $this->hasMany(PaymentRequest::class);
     }
 
+    /** @return HasMany<PaymentRequest, $this> */
     public function reviewedPayments(): HasMany
     {
         return $this->hasMany(PaymentRequest::class, 'reviewed_by');

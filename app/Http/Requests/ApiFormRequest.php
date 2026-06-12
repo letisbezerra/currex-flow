@@ -14,7 +14,7 @@ abstract class ApiFormRequest extends FormRequest
     {
         throw new HttpResponseException(response()->json([
             'message' => 'Validation failed',
-            'errors'  => $validator->errors(),
+            'errors' => $validator->errors(),
         ], 422));
     }
 }
