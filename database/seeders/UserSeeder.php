@@ -14,11 +14,11 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $employees = [
-            ['name' => 'Ana Lima',     'email' => 'ana@example.com',     'country' => 'Brazil',          'currency_code' => 'BRL'],
-            ['name' => 'James Smith',  'email' => 'james@example.com',   'country' => 'United Kingdom',  'currency_code' => 'GBP'],
-            ['name' => 'Yuki Tanaka',  'email' => 'yuki@example.com',    'country' => 'Japan',           'currency_code' => 'JPY'],
-            ['name' => 'Priya Patel',  'email' => 'priya@example.com',   'country' => 'India',           'currency_code' => 'INR'],
-            ['name' => 'Lucas Dupont', 'email' => 'lucas@example.com',   'country' => 'Canada',          'currency_code' => 'CAD'],
+            ['name' => 'Ana Lima',     'email' => 'ana@currex.dev',     'country' => 'Brazil',          'currency_code' => 'BRL'],
+            ['name' => 'James Smith',  'email' => 'james@currex.dev',   'country' => 'United Kingdom',  'currency_code' => 'GBP'],
+            ['name' => 'Yuki Tanaka',  'email' => 'yuki@currex.dev',    'country' => 'Japan',           'currency_code' => 'JPY'],
+            ['name' => 'Priya Patel',  'email' => 'priya@currex.dev',   'country' => 'India',           'currency_code' => 'INR'],
+            ['name' => 'Lucas Dupont', 'email' => 'lucas@currex.dev',   'country' => 'Canada',          'currency_code' => 'CAD'],
         ];
 
         foreach ($employees as $data) {
@@ -30,8 +30,8 @@ class UserSeeder extends Seeder
         }
 
         User::create([
-            'name' => 'Finance Manager',
-            'email' => 'finance@buzzvel.com',
+            'name' => 'Maria Santos',
+            'email' => 'maria@currex.dev',
             'password' => Hash::make('password'),
             'role' => UserRole::Finance,
             'country' => 'Portugal',
